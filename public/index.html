@@ -297,6 +297,149 @@
       gap: 12px;
     }
 
+    .how-open-mobile {
+      display: none;
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--ink-tertiary);
+      cursor: pointer;
+      letter-spacing: -0.01em;
+    }
+
+    .how-open-mobile:hover {
+      color: var(--ink-primary);
+    }
+
+    /* How it works — inverted light document on the dark canvas */
+    .how-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: none;
+      align-items: stretch;
+      justify-content: flex-end;
+    }
+
+    .how-overlay.is-open {
+      display: flex;
+    }
+
+    .how-scrim {
+      position: absolute;
+      inset: 0;
+      background: rgb(0 0 0 / 56%);
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .how-panel {
+      position: relative;
+      width: min(420px, 100%);
+      height: 100%;
+      background: #FFFFFF;
+      color: #000000;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      box-shadow: none;
+    }
+
+    .how-panel-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 28px 32px 0;
+    }
+
+    .how-title {
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      color: #000000;
+    }
+
+    .how-close {
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      color: rgb(0 0 0 / 56%);
+      cursor: pointer;
+    }
+
+    .how-close:hover,
+    .how-close:focus-visible {
+      color: #000000;
+      outline: none;
+    }
+
+    .how-close:focus-visible {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .how-lede {
+      padding: 12px 32px 0;
+      font-size: 15px;
+      font-weight: 400;
+      line-height: 1.55;
+      color: rgb(0 0 0 / 64%);
+      max-width: 34em;
+    }
+
+    .how-chapters {
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      padding: 36px 32px 48px;
+    }
+
+    .how-chapter {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .how-chapter h3 {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      color: #000000;
+    }
+
+    .how-chapter p,
+    .how-chapter ol {
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.55;
+      color: rgb(0 0 0 / 64%);
+    }
+
+    .how-chapter ol {
+      margin: 0;
+      padding-left: 1.2em;
+    }
+
+    .how-chapter li + li {
+      margin-top: 6px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .how-overlay,
+      .how-panel {
+        transition: none;
+      }
+    }
+
     /* Mobile Quick Action Strip (Hidden on Desktop) */
     .mobile-quickbar {
       display: none;
@@ -325,6 +468,10 @@
       border-radius: 0 !important;
       border: none !important;
       box-shadow: none !important;
+    }
+
+    body.is-maximized .how-open-mobile {
+      display: inline-flex;
     }
 
     /* Refined Mobile Layout */
@@ -366,6 +513,25 @@
         font-weight: 500;
         color: var(--ink-primary);
         letter-spacing: -0.01em;
+      }
+
+      .how-open-mobile {
+        display: inline-flex;
+      }
+
+      .how-overlay {
+        justify-content: stretch;
+      }
+
+      .how-panel {
+        width: 100%;
+      }
+
+      .how-panel-header,
+      .how-lede,
+      .how-chapters {
+        padding-left: 24px;
+        padding-right: 24px;
       }
 
       .terminal-body {
@@ -438,6 +604,7 @@
           <span class="status-dot"></span>
           <span id="status-text">connecting</span>
         </div>
+        <button class="btn-quiet" id="how-open" type="button">仕組み</button>
         <button class="btn-quiet" id="reconnect-btn" type="button">reconnect</button>
       </div>
     </header>
@@ -453,6 +620,7 @@
         </div>
         <span class="titlebar-center" id="titlebar-title">わりんかーん</span>
         <div class="titlebar-actions">
+          <button class="how-open-mobile" id="how-open-mobile" type="button">仕組み</button>
           <button class="btn-icon" id="btn-maximize-toggle" title="最大化 / 復元 (Escで解除)" type="button">
             <!-- Maximize SVG -->
             <svg id="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -494,6 +662,42 @@
     </footer>
   </div>
 
+  <div class="how-overlay" id="how-overlay" hidden>
+    <button class="how-scrim" id="how-scrim" type="button" aria-label="仕組みを閉じる"></button>
+    <aside class="how-panel" role="dialog" aria-modal="true" aria-labelledby="how-title" tabindex="-1">
+      <div class="how-panel-header">
+        <h2 class="how-title" id="how-title">仕組み</h2>
+        <button class="how-close" id="how-close" type="button">閉じる</button>
+      </div>
+      <p class="how-lede">
+        この画面は Render 上のサーバーとブラウザを WebSocket でつなぎ、Java の割り勘アプリをそのまま操作しています。
+      </p>
+      <div class="how-chapters">
+        <section class="how-chapter">
+          <h3>Render</h3>
+          <p>
+            フロントエンドと Node.js サーバーを同じサービスとして Render に配置しています。ページを開くと、そのサーバーからこの画面が配信されます。
+          </p>
+        </section>
+        <section class="how-chapter">
+          <h3>WebSocket</h3>
+          <p>
+            ブラウザの xterm.js が同一ホストへ WebSocket 接続します。接続のたびにサーバーが Java プロセスを疑似端末として起動し、キーボード入力と画面出力を双方向に転送します。接続を切るとプロセスも止まります。
+          </p>
+        </section>
+        <section class="how-chapter">
+          <h3>流れ</h3>
+          <ol>
+            <li>ブラウザが Render 上のページを開く</li>
+            <li>WebSocket でサーバーへ接続する</li>
+            <li>わりんかーん（Java）が起動する</li>
+            <li>入出力がリアルタイムで流れる</li>
+          </ol>
+        </section>
+      </div>
+    </aside>
+  </div>
+
   <!-- xterm.js & Addon -->
   <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm/lib/xterm.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit/lib/addon-fit.js"></script>
@@ -503,6 +707,11 @@
       const statusIndicator = document.getElementById('status-indicator');
       const statusText = document.getElementById('status-text');
       const reconnectBtn = document.getElementById('reconnect-btn');
+      const howOpen = document.getElementById('how-open');
+      const howOpenMobile = document.getElementById('how-open-mobile');
+      const howOverlay = document.getElementById('how-overlay');
+      const howClose = document.getElementById('how-close');
+      const howScrim = document.getElementById('how-scrim');
       const mountPoint = document.getElementById('terminal-mount');
       const terminalBody = document.getElementById('terminal-body');
       const dimLabel = document.getElementById('dimension-text');
@@ -518,6 +727,27 @@
       let fitAddon = null;
       let socket = null;
       let isMaximized = false;
+      let lastHowTrigger = null;
+
+      function openHowPanel(trigger) {
+        lastHowTrigger = trigger || howOpen;
+        howOverlay.hidden = false;
+        howOverlay.classList.add('is-open');
+        if (location.hash !== '#how') {
+          history.replaceState(null, '', '#how');
+        }
+        howClose.focus();
+      }
+
+      function closeHowPanel() {
+        if (howOverlay.hidden) return;
+        howOverlay.classList.remove('is-open');
+        howOverlay.hidden = true;
+        if (location.hash === '#how') {
+          history.replaceState(null, '', location.pathname + location.search);
+        }
+        if (lastHowTrigger) lastHowTrigger.focus();
+      }
 
       function updateStatus(state, text) {
         statusIndicator.setAttribute('data-status', state);
@@ -721,6 +951,11 @@
         startSession();
       });
 
+      howOpen.addEventListener('click', () => openHowPanel(howOpen));
+      howOpenMobile.addEventListener('click', () => openHowPanel(howOpenMobile));
+      howClose.addEventListener('click', closeHowPanel);
+      howScrim.addEventListener('click', closeHowPanel);
+
       // Tap on terminal body focuses terminal (ensures mobile keyboard opens)
       terminalBody.addEventListener('click', () => {
         if (terminal) terminal.focus();
@@ -728,7 +963,12 @@
 
       // Escape key to leave fullscreen/maximize
       window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && isMaximized) {
+        if (e.key !== 'Escape') return;
+        if (!howOverlay.hidden) {
+          closeHowPanel();
+          return;
+        }
+        if (isMaximized) {
           toggleMaximize(false);
         }
       });
@@ -764,6 +1004,10 @@
       });
 
       startSession();
+
+      if (location.hash === '#how') {
+        openHowPanel(howOpen);
+      }
     })();
   </script>
 </body>
