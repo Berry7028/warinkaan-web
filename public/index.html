@@ -319,13 +319,18 @@
       position: fixed;
       inset: 0;
       z-index: 40;
-      display: none;
+      display: flex;
       align-items: stretch;
       justify-content: flex-end;
+      pointer-events: none;
+    }
+
+    .how-overlay[hidden] {
+      display: none;
     }
 
     .how-overlay.is-open {
-      display: flex;
+      pointer-events: auto;
     }
 
     .how-scrim {
@@ -335,6 +340,12 @@
       border: none;
       padding: 0;
       cursor: pointer;
+      opacity: 0;
+      transition: opacity 240ms ease;
+    }
+
+    .how-overlay.is-open .how-scrim {
+      opacity: 1;
     }
 
     .how-panel {
@@ -347,6 +358,14 @@
       display: flex;
       flex-direction: column;
       box-shadow: none;
+      opacity: 0;
+      transform: translate3d(20px, 0, 0);
+      transition: opacity 260ms ease-out, transform 260ms ease-out;
+    }
+
+    .how-overlay.is-open .how-panel {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
     }
 
     .how-panel-header {
@@ -434,9 +453,10 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .how-overlay,
+      .how-scrim,
       .how-panel {
         transition: none;
+        transform: none;
       }
     }
 
@@ -525,6 +545,11 @@
 
       .how-panel {
         width: 100%;
+        transform: translate3d(0, 12px, 0);
+      }
+
+      .how-overlay.is-open .how-panel {
+        transform: translate3d(0, 0, 0);
       }
 
       .how-panel-header,
@@ -587,6 +612,15 @@
 
       .quick-btn.enter-btn:active {
         background-color: rgb(16 185 129 / 24%);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .how-scrim,
+      .how-panel,
+      .how-overlay.is-open .how-panel {
+        transition: none;
+        transform: none;
       }
     }
   </style>
@@ -728,11 +762,25 @@
       let socket = null;
       let isMaximized = false;
       let lastHowTrigger = null;
+      let howCloseTimer = null;
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
       function openHowPanel(trigger) {
         lastHowTrigger = trigger || howOpen;
+        if (howCloseTimer) {
+          clearTimeout(howCloseTimer);
+          howCloseTimer = null;
+        }
+
         howOverlay.hidden = false;
-        howOverlay.classList.add('is-open');
+        howOverlay.classList.remove('is-open');
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            howOverlay.classList.add('is-open');
+          });
+        });
+
         if (location.hash !== '#how') {
           history.replaceState(null, '', '#how');
         }
@@ -740,13 +788,26 @@
       }
 
       function closeHowPanel() {
-        if (howOverlay.hidden) return;
+        if (howOverlay.hidden && !howOverlay.classList.contains('is-open')) return;
+
         howOverlay.classList.remove('is-open');
-        howOverlay.hidden = true;
-        if (location.hash === '#how') {
-          history.replaceState(null, '', location.pathname + location.search);
+
+        const finishClose = () => {
+          howCloseTimer = null;
+          howOverlay.hidden = true;
+          if (location.hash === '#how') {
+            history.replaceState(null, '', location.pathname + location.search);
+          }
+          if (lastHowTrigger) lastHowTrigger.focus();
+        };
+
+        if (prefersReducedMotion.matches) {
+          finishClose();
+          return;
         }
-        if (lastHowTrigger) lastHowTrigger.focus();
+
+        if (howCloseTimer) clearTimeout(howCloseTimer);
+        howCloseTimer = setTimeout(finishClose, 280);
       }
 
       function updateStatus(state, text) {
