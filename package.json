@@ -1,0 +1,15 @@
+{
+  "name": "warinkaan-web",
+  "version": "1.0.0",
+  "description": "CUI割勘アプリ「わりんかーん」のWebターミナル版",
+  "main": "server.js",
+  "scripts": {
+    "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/spawn-helper 2>/dev/null || true",
+    "start": "node server.js",
+    "build:java": "mkdir -p bin && javac -encoding UTF-8 -d bin src/module-info.java $(find src/warinkaan -name '*.java')"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.2",
+    "ws": "^8.18.0"
+  }
+}

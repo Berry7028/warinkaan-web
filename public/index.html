@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>わりんかーん</title>
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- xterm.js Stylesheet -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm/css/xterm.css">
+
+  <style>
+    :root {
+      --bg: #09090B;
+      --surface: #111113;
+      --surface-border: rgb(255 255 255 / 8%);
+      --surface-border-subtle: rgb(255 255 255 / 5%);
+
+      --ink-primary: #EDEDED;
+      --ink-secondary: rgb(255 255 255 / 56%);
+      --ink-tertiary: rgb(255 255 255 / 32%);
+
+      --fill-hover: rgb(255 255 255 / 5%);
+      --fill-pressed: rgb(255 255 255 / 10%);
+
+      --status-live: #10B981;
+      --status-down: #EF4444;
+
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-mono: 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      background-color: var(--bg);
+      color: var(--ink-primary);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 20px;
+      transition: padding 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .shell-container {
+      width: 100%;
+      max-width: 860px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Top Nav Meta */
+    .shell-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+      user-select: none;
+    }
+
+    .brand-meta {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .brand-title {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      color: var(--ink-primary);
+    }
+
+    .brand-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-tertiary);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .status-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--ink-secondary);
+    }
+
+    .status-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background-color: var(--status-live);
+      transition: background-color 0.2s ease;
+    }
+
+    .status-item[data-status="disconnected"] .status-dot {
+      background-color: var(--status-down);
+    }
+
+    .btn-quiet {
+      background: none;
+      border: none;
+      padding: 0;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-tertiary);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.15s ease;
+    }
+
+    .btn-quiet:hover {
+      color: var(--ink-primary);
+    }
+
+    .btn-quiet:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      text-decoration: none;
+    }
+
+    /* Terminal Window Frame */
+    .terminal-window {
+      background-color: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      height: 540px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Window Control Topbar */
+    .terminal-titlebar {
+      height: 36px;
+      padding: 0 14px;
+      background-color: #141417;
+      border-bottom: 1px solid var(--surface-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .window-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.15s ease, transform 0.12s ease;
+      background-color: rgb(255 255 255 / 16%);
+    }
+
+    .control-dot:hover {
+      opacity: 0.85;
+      transform: scale(1.15);
+    }
+
+    .control-dot:active {
+      transform: scale(0.92);
+    }
+
+    .control-dot.close {
+      background-color: #EF4444;
+    }
+
+    .control-dot.minimize {
+      background-color: #F59E0B;
+    }
+
+    .control-dot.maximize {
+      background-color: #10B981;
+    }
+
+    .titlebar-center {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-tertiary);
+      letter-spacing: 0.02em;
+    }
+
+    .titlebar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-icon {
+      background: none;
+      border: none;
+      color: var(--ink-tertiary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      border-radius: 4px;
+      transition: color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+    }
+
+    .btn-icon:hover {
+      color: var(--ink-primary);
+      background-color: var(--fill-hover);
+    }
+
+    .btn-icon:active {
+      transform: scale(0.92);
+    }
+
+    .btn-icon svg {
+      width: 13px;
+      height: 13px;
+      stroke-width: 2;
+    }
+
+    /* Terminal Mountpoint */
+    .terminal-body {
+      flex: 1;
+      padding: 14px 18px;
+      overflow: hidden;
+      position: relative;
+      cursor: text;
+    }
+
+    #terminal-mount {
+      width: 100%;
+      height: 100%;
+    }
+
+    .xterm {
+      height: 100%;
+    }
+
+    .xterm-viewport {
+      overflow-y: auto !important;
+      background-color: transparent !important;
+    }
+
+    /* Subtle Meta Row below terminal */
+    .shell-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-tertiary);
+      user-select: none;
+    }
+
+    .footer-hints {
+      display: flex;
+      gap: 12px;
+    }
+
+    /* Mobile Quick Action Strip (Hidden on Desktop) */
+    .mobile-quickbar {
+      display: none;
+    }
+
+    /* Maximized / Fullscreen State */
+    body.is-maximized {
+      padding: 0 !important;
+      background-color: var(--surface) !important;
+    }
+
+    body.is-maximized .shell-container {
+      max-width: 100vw !important;
+      height: 100vh !important;
+      gap: 0 !important;
+    }
+
+    body.is-maximized .shell-header,
+    body.is-maximized .shell-footer {
+      display: none !important;
+    }
+
+    body.is-maximized .terminal-window {
+      height: 100vh !important;
+      width: 100vw !important;
+      border-radius: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    /* Refined Mobile Layout */
+    @media (max-width: 640px) {
+      body {
+        padding: 0;
+        height: 100dvh;
+        justify-content: flex-start;
+      }
+
+      .shell-container {
+        height: 100dvh;
+        gap: 0;
+      }
+
+      .shell-header {
+        display: none;
+      }
+
+      .terminal-window {
+        flex: 1;
+        height: auto;
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+      }
+
+      .terminal-titlebar {
+        height: 40px;
+        padding: 0 14px;
+        padding-top: env(safe-area-inset-top, 0);
+        background-color: #0E0E10;
+        border-bottom: 1px solid var(--surface-border-subtle);
+      }
+
+      .titlebar-center {
+        font-family: var(--font-sans);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--ink-primary);
+        letter-spacing: -0.01em;
+      }
+
+      .terminal-body {
+        padding: 8px 10px;
+      }
+
+      .shell-footer {
+        display: none;
+      }
+
+      /* Refined Mobile Keypad Strip (Clean Grid Layout) */
+      .mobile-quickbar {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr) 1.6fr;
+        gap: 5px;
+        padding: 6px 10px;
+        padding-bottom: calc(6px + env(safe-area-inset-bottom, 0));
+        background-color: #0E0E10;
+        border-top: 1px solid var(--surface-border-subtle);
+        flex-shrink: 0;
+        user-select: none;
+      }
+
+      .quick-btn {
+        height: 38px;
+        background-color: rgb(255 255 255 / 4%);
+        border: 1px solid var(--surface-border-subtle);
+        border-radius: 6px;
+        color: var(--ink-primary);
+        font-family: var(--font-mono);
+        font-size: 13px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.1s ease, transform 0.08s ease;
+      }
+
+      .quick-btn:active {
+        background-color: rgb(255 255 255 / 12%);
+        transform: scale(0.94);
+      }
+
+      .quick-btn.enter-btn {
+        font-family: var(--font-sans);
+        font-size: 11.5px;
+        font-weight: 500;
+        color: var(--status-live);
+        border-color: rgb(16 185 129 / 24%);
+        background-color: rgb(16 185 129 / 10%);
+      }
+
+      .quick-btn.enter-btn:active {
+        background-color: rgb(16 185 129 / 24%);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell-container">
+    <!-- Desktop Header -->
+    <header class="shell-header">
+      <div class="brand-meta">
+        <h1 class="brand-title">わりんかーん</h1>
+        <span class="brand-tag">cui terminal</span>
+      </div>
+      <div class="header-actions">
+        <div class="status-item" id="status-indicator" data-status="connecting">
+          <span class="status-dot"></span>
+          <span id="status-text">connecting</span>
+        </div>
+        <button class="btn-quiet" id="reconnect-btn" type="button">reconnect</button>
+      </div>
+    </header>
+
+    <!-- Terminal Window -->
+    <main class="terminal-window">
+      <!-- Titlebar with window controls & maximize button -->
+      <div class="terminal-titlebar">
+        <div class="window-controls">
+          <button class="control-dot close" id="btn-dot-close" title="セッション切断 (6)" type="button"></button>
+          <button class="control-dot minimize" id="btn-dot-clear" title="画面クリア" type="button"></button>
+          <button class="control-dot maximize" id="btn-dot-maximize" title="最大化 / 復元" type="button"></button>
+        </div>
+        <span class="titlebar-center" id="titlebar-title">わりんかーん</span>
+        <div class="titlebar-actions">
+          <button class="btn-icon" id="btn-maximize-toggle" title="最大化 / 復元 (Escで解除)" type="button">
+            <!-- Maximize SVG -->
+            <svg id="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+            <!-- Restore SVG -->
+            <svg id="icon-restore" style="display: none;" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M4 14h6m0 0v6m0-6L3 21m17-7h-6m0 0V8m0 6l7 7M14 4h6m-6 0v6m6-6l-7 7M4 10h6m-6 0V4m0 6l7-7"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mount Target for xterm.js -->
+      <div class="terminal-body" id="terminal-body">
+        <div id="terminal-mount"></div>
+      </div>
+
+      <!-- Mobile Quick Action Keypad -->
+      <div class="mobile-quickbar">
+        <button class="quick-btn" data-key="1" type="button">1</button>
+        <button class="quick-btn" data-key="2" type="button">2</button>
+        <button class="quick-btn" data-key="3" type="button">3</button>
+        <button class="quick-btn" data-key="4" type="button">4</button>
+        <button class="quick-btn" data-key="5" type="button">5</button>
+        <button class="quick-btn" data-key="6" type="button">6</button>
+        <button class="quick-btn enter-btn" data-key="enter" type="button">↵ Enter</button>
+      </div>
+    </main>
+
+    <!-- Subtle Footer Info -->
+    <footer class="shell-footer">
+      <span id="dimension-text">—</span>
+      <div class="footer-hints">
+        <span>[1-6] select</span>
+        <span>[Enter] confirm</span>
+        <span>[Esc] exit fullscreen</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- xterm.js & Addon -->
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit/lib/addon-fit.js"></script>
+
+  <script>
+    (function () {
+      const statusIndicator = document.getElementById('status-indicator');
+      const statusText = document.getElementById('status-text');
+      const reconnectBtn = document.getElementById('reconnect-btn');
+      const mountPoint = document.getElementById('terminal-mount');
+      const terminalBody = document.getElementById('terminal-body');
+      const dimLabel = document.getElementById('dimension-text');
+
+      const btnDotClose = document.getElementById('btn-dot-close');
+      const btnDotClear = document.getElementById('btn-dot-clear');
+      const btnDotMaximize = document.getElementById('btn-dot-maximize');
+      const btnMaximizeToggle = document.getElementById('btn-maximize-toggle');
+      const iconMaximize = document.getElementById('icon-maximize');
+      const iconRestore = document.getElementById('icon-restore');
+
+      let terminal = null;
+      let fitAddon = null;
+      let socket = null;
+      let isMaximized = false;
+
+      function updateStatus(state, text) {
+        statusIndicator.setAttribute('data-status', state);
+        statusText.textContent = text;
+        reconnectBtn.disabled = (state === 'connecting');
+      }
+
+      function updateDims() {
+        if (terminal && dimLabel) {
+          dimLabel.textContent = `${terminal.cols} × ${terminal.rows}`;
+        }
+      }
+
+      function toggleMaximize(forceState) {
+        isMaximized = (typeof forceState === 'boolean') ? forceState : !isMaximized;
+
+        if (isMaximized) {
+          document.body.classList.add('is-maximized');
+          iconMaximize.style.display = 'none';
+          iconRestore.style.display = 'inline-block';
+
+          // Try browser fullscreen if available
+          if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          }
+        } else {
+          document.body.classList.remove('is-maximized');
+          iconMaximize.style.display = 'inline-block';
+          iconRestore.style.display = 'none';
+
+          // Exit browser fullscreen if active
+          if (document.exitFullscreen && document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+          }
+        }
+
+        setTimeout(() => {
+          if (fitAddon) {
+            try {
+              fitAddon.fit();
+              updateDims();
+              if (socket && socket.readyState === WebSocket.OPEN && terminal) {
+                socket.send(JSON.stringify({
+                  type: 'resize',
+                  cols: terminal.cols,
+                  rows: terminal.rows,
+                }));
+              }
+            } catch (e) {}
+          }
+          if (terminal) terminal.focus();
+        }, 120);
+      }
+
+      // Handle native browser fullscreen change (e.g. Esc key pressed)
+      document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement && isMaximized) {
+          toggleMaximize(false);
+        }
+      });
+
+      function initTerminal() {
+        if (terminal) {
+          terminal.dispose();
+          mountPoint.innerHTML = '';
+        }
+
+        const isMobile = window.innerWidth <= 640;
+
+        terminal = new Terminal({
+          cursorBlink: true,
+          fontSize: isMobile ? 12 : 13.5,
+          fontFamily: "'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+          lineHeight: 1.45,
+          letterSpacing: 0,
+          theme: {
+            background: '#111113',
+            foreground: '#EDEDED',
+            cursor: '#EDEDED',
+            cursorAccent: '#111113',
+            selectionBackground: 'rgba(255, 255, 255, 0.18)',
+            black: '#111113',
+            red: '#EF4444',
+            green: '#10B981',
+            yellow: '#F59E0B',
+            blue: '#3B82F6',
+            magenta: '#8B5CF6',
+            cyan: '#06B6D4',
+            white: '#EDEDED',
+            brightBlack: '#6B7280',
+            brightRed: '#F87171',
+            brightGreen: '#34D399',
+            brightYellow: '#FBBF24',
+            brightBlue: '#60A5FA',
+            brightMagenta: '#A78BFA',
+            brightCyan: '#38BDF8',
+            brightWhite: '#FFFFFF',
+          },
+        });
+
+        fitAddon = new FitAddon.FitAddon();
+        terminal.loadAddon(fitAddon);
+        terminal.open(mountPoint);
+
+        try {
+          fitAddon.fit();
+          updateDims();
+        } catch (e) {}
+
+        terminal.onData((data) => {
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(data);
+          }
+        });
+
+        terminal.onResize((size) => {
+          updateDims();
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+              type: 'resize',
+              cols: size.cols,
+              rows: size.rows,
+            }));
+          }
+        });
+      }
+
+      function connectSocket() {
+        if (socket) {
+          try {
+            socket.close();
+          } catch (e) {}
+        }
+
+        updateStatus('connecting', 'connecting');
+
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const socketUrl = `${protocol}//${location.host}`;
+
+        socket = new WebSocket(socketUrl);
+        socket.binaryType = 'arraybuffer';
+
+        socket.onopen = () => {
+          updateStatus('connected', 'connected');
+          terminal.focus();
+
+          if (fitAddon) {
+            fitAddon.fit();
+          }
+
+          if (terminal) {
+            socket.send(JSON.stringify({
+              type: 'resize',
+              cols: terminal.cols,
+              rows: terminal.rows,
+            }));
+          }
+        };
+
+        socket.onmessage = (event) => {
+          if (typeof event.data === 'string') {
+            terminal.write(event.data);
+          } else {
+            terminal.write(new Uint8Array(event.data));
+          }
+        };
+
+        socket.onclose = () => {
+          updateStatus('disconnected', 'disconnected');
+        };
+
+        socket.onerror = () => {
+          updateStatus('disconnected', 'offline');
+        };
+      }
+
+      function startSession() {
+        initTerminal();
+        connectSocket();
+      }
+
+      // Maximize buttons (both the green dot and the maximize icon)
+      btnDotMaximize.addEventListener('click', () => toggleMaximize());
+      btnMaximizeToggle.addEventListener('click', () => toggleMaximize());
+
+      // Window controls
+      btnDotClear.addEventListener('click', () => {
+        if (terminal) {
+          terminal.clear();
+          terminal.focus();
+        }
+      });
+
+      btnDotClose.addEventListener('click', () => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send('6\r');
+        }
+      });
+
+      reconnectBtn.addEventListener('click', () => {
+        startSession();
+      });
+
+      // Tap on terminal body focuses terminal (ensures mobile keyboard opens)
+      terminalBody.addEventListener('click', () => {
+        if (terminal) terminal.focus();
+      });
+
+      // Escape key to leave fullscreen/maximize
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isMaximized) {
+          toggleMaximize(false);
+        }
+      });
+
+      // Mobile Quick Buttons
+      document.querySelectorAll('.quick-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const key = btn.getAttribute('data-key');
+          if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+          if (key === 'enter') {
+            socket.send('\r');
+          } else {
+            socket.send(key);
+          }
+          if (terminal) terminal.focus();
+        });
+      });
+
+      // Resize observer
+      let resizeTimer;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          if (fitAddon) {
+            try {
+              fitAddon.fit();
+              updateDims();
+            } catch (e) {}
+          }
+        }, 80);
+      });
+
+      startSession();
+    })();
+  </script>
+</body>
+</html>
